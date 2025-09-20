@@ -7,8 +7,6 @@ import json
 import os
 from collections import Counter
 import re
-from wordcloud import WordCloud
-import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
 
@@ -277,8 +275,8 @@ with tab3:
                 )
                 st.plotly_chart(fig3, use_container_width=True)
         
-        # 워드클라우드 (어려웠던 부분)
-        st.markdown("### ☁️ 어려웠던 부분 워드클라우드")
+        # 자주 언급된 어려운 부분 (워드클라우드 대체)
+        st.markdown("### 📝 자주 언급된 어려운 부분")
         difficult_texts = ' '.join([r['difficult_part'] for r in responses if r['difficult_part']])
         
         if difficult_texts.strip():
@@ -287,21 +285,36 @@ with tab3:
             word_freq = Counter(words)
             
             if word_freq:
-                # 워드클라우드 생성
-                wc = WordCloud(
-                    font_path='/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
-                    background_color='white',
-                    width=800,
-                    height=400,
-                    max_words=50,
-                    relative_scaling=0.5,
-                    colormap='viridis'
-                ).generate_from_frequencies(word_freq)
+                # 상위 10개 단어만 표시
+                top_words = dict(word_freq.most_common(10))
                 
-                fig, ax = plt.subplots(figsize=(10, 5))
-                ax.imshow(wc, interpolation='bilinear')
-                ax.axis('off')
-                st.pyplot(fig)
+                # 단어 빈도 막대그래프
+                df_words = pd.DataFrame([
+                    {'단어': word, '언급 횟수': count} 
+                    for word, count in top_words.items()
+                ])
+                
+                fig_words = px.bar(
+                    df_words,
+                    x='언급 횟수',
+                    y='단어',
+                    orientation='h',
+                    color='언급 횟수',
+                    color_continuous_scale='Viridis',
+                    title="자주 언급된 어려운 키워드"
+                )
+                fig_words.update_layout(height=400)
+                st.plotly_chart(fig_words, use_container_width=True)
+                
+                # 단어 빈도 테이블도 표시
+                with st.expander("🔍 전체 키워드 빈도 보기"):
+                    df_all_words = pd.DataFrame([
+                        {'키워드': word, '횟수': count} 
+                        for word, count in word_freq.most_common(20)
+                    ])
+                    st.dataframe(df_all_words, use_container_width=True, hide_index=True)
+        else:
+            st.info("아직 어려운 부분에 대한 피드백이 없습니다.")
         
         # 데이터 다운로드
         st.markdown("### 💾 데이터 다운로드")
